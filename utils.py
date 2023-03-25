@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights
 import torch
+import matplotlib.pyplot as plt
 
 class CarsDataset(Dataset):
     def __init__(self, images, labels, transform=None):
@@ -27,5 +28,15 @@ def get_model(n_class):
 
     return model
 
+def save_figure(output, title, x_label, y_label, line, label):
+    plt.figure(figsize=(15, 7.5))
 
-    
+    for i in range(len(line)):
+        plt.plot(line[i], label=label[i])
+    plt.title(title, fontsize=18)
+    plt.ylabel(y_label, fontsize=16)
+    plt.xlabel(x_label, fontsize=16)
+    plt.legend(prop={'size': 16})
+    plt.grid()
+
+    plt.savefig(output, bbox_inches='tight')
