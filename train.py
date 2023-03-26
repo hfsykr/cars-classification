@@ -110,47 +110,45 @@ if '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument('--data', type=str, default='data', help='path of your dataset location')
     argParser.add_argument('--output', type=str, default='output', help='path of your output location')
-    argParser.add_argument('--size', type=int, default=[224, 224], nargs=2, help='image input size')
+    argParser.add_argument('--size', type=int, default=224, help='image input size')
     argParser.add_argument('--epoch', type=int, default=50, help='how many epoch your model will be trained')
     argParser.add_argument('--batch_size', type=int, default=8, help='batch size for training')
     argParser.add_argument('--learning_rate', type=float, default=1e-3, help='batch size for training')
     argParser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay used for training')
+    argParser.add_argument('--device', type=str, default='cuda:0', help='device used for training, either cuda (gpu) or cpu')
 
     args = argParser.parse_args()
 
     data = Path(args.data)
+    images_data = data/'cars_train'
 
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     output = Path(args.output)/('train_' + timestamp)
     # Create the directory if not exist
     output.mkdir(parents=True, exist_ok=True)
     
-    image_path = data/'cars_train'
-    
-    annotation_mat = loadmat(data/'cars_train_annos.mat')
+    train_annot_mat = loadmat(data/'cars_train_annos.mat')
     class_mat = loadmat(data/'cars_meta.mat')
 
-    images = [p for p in image_path.iterdir() if p.is_file()]
-    image_size = tuple(args.size)
+    images = [p for p in images_data.iterdir() if p.is_file()]
 
     # Substracting every label with 1, because by default the label start from 1
-    labels = [annot['class'][0][0] - 1 for annot in annotation_mat['annotations'][0]]
-    # Change from int to long
+    labels = [annot['class'][0][0] - 1 for annot in train_annot_mat['annotations'][0]]    # Change from int to long
     labels = torch.as_tensor(labels, dtype=torch.long)
 
     class_names = [class_name[0] for class_name in class_mat['class_names'][0]]
     n_class = len(class_names)
 
     transform = transforms.Compose([
-        transforms.Resize(image_size),
+        transforms.Resize((args.size, args.size)),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     ])
 
     dataset = CarsDataset(images, labels, transform)
 
-    split_generator = torch.Generator().manual_seed(2023)
-    train_dataset, val_dataset = random_split(dataset, [0.8, 0.2], generator=split_generator)
+    generator = torch.Generator().manual_seed(42)
+    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2], generator=generator)
 
     batch_size = args.batch_size
 
@@ -161,7 +159,7 @@ if '__main__':
 
     model = get_model(n_class)
     
-    device = torch.device('cuda:0')
+    device = torch.device(args.device)
 
     criterion = torch.nn.CrossEntropyLoss()
     
