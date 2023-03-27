@@ -3,6 +3,8 @@ from PIL import Image
 from torchvision.models import mobilenet_v3_large, MobileNet_V3_Large_Weights
 import torch
 import matplotlib.pyplot as plt
+import numpy as np
+from itertools import chain
 
 class CarsDataset(Dataset):
     def __init__(self, images, labels, transform=None):
@@ -28,7 +30,7 @@ def get_model(n_class):
 
     return model
 
-def save_figure(output, title, x_label, y_label, line, label):
+def save_plot(output, title, x_label, y_label, line, label):
     plt.figure(figsize=(15, 7.5))
 
     for i in range(len(line)):
@@ -40,3 +42,27 @@ def save_figure(output, title, x_label, y_label, line, label):
     plt.grid()
 
     plt.savefig(output, bbox_inches='tight')
+
+def _indexing(x, indices):
+    # Indexing for numpy array
+    if hasattr(x, 'shape'):
+        return x[indices]
+
+    # Indexing for list
+    return [x[idx] for idx in indices]
+
+def train_val_split(*arrays, val_size=0.25, shuffle=True, random_seed=1):
+    length = len(arrays[0])
+
+    n_val = int(np.ceil(length * val_size))
+    n_train = length - n_val
+
+    if shuffle:
+        perm = np.random.RandomState(random_seed).permutation(length)
+        val_indices = perm[:n_val]
+        train_indices = perm[n_val:]
+    else:
+        train_indices = np.arange(n_train)
+        val_indices = np.arange(n_train, length)
+
+    return list(chain.from_iterable((_indexing(x, train_indices), _indexing(x, val_indices)) for x in arrays))

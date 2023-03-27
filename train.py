@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from scipy.io import loadmat
 from torchvision import transforms
-from utils import CarsDataset, get_model, save_figure
+from utils import CarsDataset, get_model, save_plot, train_val_split
 import torch
 from torch.utils.data import random_split, DataLoader
 import time
@@ -82,12 +82,14 @@ def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, out
 
         torch.save(model.state_dict(), output/'latest.pt')
 
-        state = {
-            'epoch': epoch,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-        }
-        torch.save(state, output/'checkpoint.pt')
+        if (epoch + 1) % 10 == 0:
+            print('Saving checkpoint...')
+            state = {
+                'epoch': epoch,
+                'state_dict': model.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }
+            torch.save(state, output/'checkpoint.pt')
 
         epoch_elapsed = time.time() - epoch_start
         time_history.append(epoch_elapsed)
@@ -112,7 +114,7 @@ if '__main__':
     argParser.add_argument('--output', type=str, default='output', help='path of your output location')
     argParser.add_argument('--size', type=int, default=224, help='image input size')
     argParser.add_argument('--epoch', type=int, default=50, help='how many epoch your model will be trained')
-    argParser.add_argument('--batch_size', type=int, default=8, help='batch size for training')
+    argParser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
     argParser.add_argument('--learning_rate', type=float, default=1e-3, help='batch size for training')
     argParser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay used for training')
     argParser.add_argument('--device', type=str, default='cuda:0', help='device used for training, either cuda (gpu) or cpu')
@@ -127,28 +129,41 @@ if '__main__':
     # Create the directory if not exist
     output.mkdir(parents=True, exist_ok=True)
     
-    train_annot_mat = loadmat(data/'cars_train_annos.mat')
+    annot_mat = loadmat(data/'cars_train_annos.mat')
     class_mat = loadmat(data/'cars_meta.mat')
 
     images = [p for p in images_data.iterdir() if p.is_file()]
 
     # Substracting every label with 1, because by default the label start from 1
-    labels = [annot['class'][0][0] - 1 for annot in train_annot_mat['annotations'][0]]    # Change from int to long
+    labels = [annot['class'][0][0] - 1 for annot in annot_mat['annotations'][0]]
+    # Change from int to long
     labels = torch.as_tensor(labels, dtype=torch.long)
 
     class_names = [class_name[0] for class_name in class_mat['class_names'][0]]
     n_class = len(class_names)
 
-    transform = transforms.Compose([
+    train_images, val_images, train_labels, val_labels = train_val_split(images, labels, val_size=0.2, shuffle=True, random_seed=42)
+
+    train_transform = transforms.Compose([
+        transforms.Resize((args.size, args.size)),
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomRotation(35),
+        transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
+        transforms.RandomGrayscale(p=0.5),
+        transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+        transforms.RandomPosterize(bits=2, p=0.5),
+        transforms.ToTensor(),
+        transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    ])
+
+    val_transform = transforms.Compose([
         transforms.Resize((args.size, args.size)),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     ])
 
-    dataset = CarsDataset(images, labels, transform)
-
-    generator = torch.Generator().manual_seed(42)
-    train_dataset, val_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2], generator=generator)
+    train_dataset = CarsDataset(train_images, train_labels, train_transform)
+    val_dataset = CarsDataset(val_images, val_labels, val_transform)
 
     batch_size = args.batch_size
 
@@ -172,8 +187,8 @@ if '__main__':
     
     history = fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, output)
 
-    # Saving the figure (maybe will be used in the future)
-    save_figure(
+    # Saving the plot (maybe will be used in the future)
+    save_plot(
         output=output/'plot_loss.png', 
         title='Training Loss', 
         x_label='Epoch', 
@@ -181,7 +196,7 @@ if '__main__':
         line=[history['train_loss'], history['val_loss']], 
         label=['Train Loss', 'Val Loss']
     )
-    save_figure(
+    save_plot(
         output=output/'plot_accuracy.png', 
         title='Training Accuracy', 
         x_label='Epoch', 
