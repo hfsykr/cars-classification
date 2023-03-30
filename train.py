@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from scipy.io import loadmat
 from torchvision import transforms
-from utils import CarsDataset, get_model, save_plot, train_val_split
+from utils import CarsDataset, get_model, train_val_split
 import torch
 from torch.utils.data import DataLoader
 import time
@@ -110,9 +110,11 @@ if '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument('--data', type=str, default='data', help='path of your dataset location')
     argParser.add_argument('--output', type=str, default='output', help='path of your output location')
+    argParser.add_argument('--model', type=str, default='mobilenet_v3', help='model that will be used for training')
     argParser.add_argument('--epoch', type=int, default=50, help='how many epoch your model will be trained')
+    argParser.add_argument('--image_size', type=int, default=[240, 360], nargs=2, help='image size (h x w)')
     argParser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
-    argParser.add_argument('--learning_rate', type=float, default=1e-3, help='batch size for training')
+    argParser.add_argument('--learning_rate', type=float, default=1e-3, help='learning rate for training')
     argParser.add_argument('--momentum', type=float, default=9e-1, help='momentum used for training')
     argParser.add_argument('--checkpoint', type=str, default=None, help='path of your checkpoint file')
     argParser.add_argument('--device', type=str, default='cuda', help='device used for training, either cuda (gpu) or cpu')
@@ -142,7 +144,7 @@ if '__main__':
 
     train_images, val_images, train_labels, val_labels = train_val_split(images, labels, val_size=0.2, shuffle=True, random_seed=42)
 
-    image_size = (240, 360)
+    image_size = (args.image_size[0], args.image_size[1])
     train_transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.RandomHorizontalFlip(p=0.5),
@@ -171,7 +173,7 @@ if '__main__':
         'val': DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
     }
 
-    model = get_model(n_class)
+    model = get_model(args.model, n_class)
     
     device = torch.device(args.device)
     model.to(device)
@@ -190,24 +192,6 @@ if '__main__':
         optimizer.load_state_dict(checkpoint['optimizer'])
     
     history = fit(model, dataloaders, criterion, optimizer, epochs, device, output)
-
-    # Saving the plot (maybe will be used in the future)
-    save_plot(
-        output=output/'plot_loss.png', 
-        title='Training Loss', 
-        x_label='Epoch', 
-        y_label='Loss', 
-        line=[history['train_loss'], history['val_loss']], 
-        label=['Train Loss', 'Val Loss']
-    )
-    save_plot(
-        output=output/'plot_accuracy.png', 
-        title='Training Accuracy', 
-        x_label='Epoch', 
-        y_label='Accuracy', 
-        line=[history['train_acc'], history['val_acc']], 
-        label=['Train Accuracy', 'Val Accuracy']
-    )
 
     with open(output/'history.pkl', 'wb') as handle:
         pickle.dump(fit, handle, protocol=pickle.HIGHEST_PROTOCOL)

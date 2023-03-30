@@ -1,6 +1,6 @@
 from torch.utils.data import Dataset
 from PIL import Image
-from torchvision.models import efficientnet_v2_s
+from torchvision import models
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,10 +23,17 @@ class CarsDataset(Dataset):
 
         return image, label
 
-def get_model(n_class):
-    model = efficientnet_v2_s(weights='IMAGENET1K_V1')
-    num_ftrs = model.classifier[1].in_features
-    model.classifier[1] = torch.nn.Linear(num_ftrs, n_class)
+def get_model(model_type, n_class):
+    model = None
+
+    if model_type == 'mobilenet_v3':
+        model = models.mobilenet_v3_small(weights='IMAGENET1K_V1')
+        num_ftrs = model.classifier[3].in_features
+        model.classifier[3] = torch.nn.Linear(num_ftrs, n_class)
+    elif model_type == 'efficientnet_v2':
+        model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
+        num_ftrs = model.classifier[1].in_features
+        model.classifier[1] = torch.nn.Linear(num_ftrs, n_class)
 
     return model
 

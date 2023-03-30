@@ -9,9 +9,11 @@ import torch
 if '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument('--data', type=str, default='data', help='path of your data location')
+    argParser.add_argument('--model', type=str, default='mobilenet_v3', help='your chosen trained model type')
     argParser.add_argument('--image', type=str, help='path of the image that you want to inferenced')
     argParser.add_argument('--weights', type=str, help='path of your trained model weights location')
-    argParser.add_argument('--device', type=str, default='cuda', help='device used for training, either cuda (gpu) or cpu')
+    argParser.add_argument('--image_size', type=int, default=[240, 360], nargs=2, help='image size (h x w)')
+    argParser.add_argument('--device', type=str, default='cuda', help='device used for inference, either cuda (gpu) or cpu')
 
     args = argParser.parse_args()
 
@@ -22,19 +24,19 @@ if '__main__':
     class_names = [class_name[0] for class_name in class_mat['class_names'][0]]
     n_class = len(class_names)
 
-    image_size = (240, 360)
+    image_size = (args.image_size[0], args.image_size[1])
+    print(image_size)
     transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     ])
 
-    import numpy as np
     image = Image.open(args.image).convert('RGB')
     
     input = transform(image)
 
-    model = get_model(n_class)
+    model = get_model(args.model, n_class)
     
     device = torch.device(args.device)
     model.to(device)
