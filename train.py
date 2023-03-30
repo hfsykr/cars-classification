@@ -4,14 +4,14 @@ from scipy.io import loadmat
 from torchvision import transforms
 from utils import CarsDataset, get_model, save_plot, train_val_split
 import torch
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader
 import time
 from datetime import datetime
 from tqdm import tqdm
 import numpy as np
 import pickle
 
-def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, output):
+def fit(model, dataloaders, criterion, optimizer, epochs, device, output):
     time_start = time.time()
 
     train_loss = []
@@ -22,8 +22,6 @@ def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, out
 
     best_loss = np.inf
     best_acc = 0.0
-
-    model.to(device)
 
     for epoch in range(epochs):
         epoch_start = time.time()
@@ -39,9 +37,9 @@ def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, out
             running_loss = 0.0
             running_corrects = 0
 
-            for _, data in enumerate(tqdm(dataloaders[phase])):
-                inputs = data[0].to(device)
-                labels = data[1].to(device)
+            for inputs, labels in tqdm(dataloaders[phase]):
+                inputs = inputs.to(device)
+                labels = labels.to(device)
 
                 optimizer.zero_grad()
 
@@ -63,7 +61,7 @@ def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, out
             print(f'{phase.capitalize()} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
             if phase == 'train':
-                scheduler.step()
+                # scheduler.step()
                 train_loss.append(epoch_loss)
                 train_acc.append(epoch_acc)
             else:
@@ -82,7 +80,7 @@ def fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, out
 
         torch.save(model.state_dict(), output/'latest.pt')
 
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 5 == 0:
             print('Saving checkpoint...')
             state = {
                 'epoch': epoch,
@@ -112,12 +110,12 @@ if '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument('--data', type=str, default='data', help='path of your dataset location')
     argParser.add_argument('--output', type=str, default='output', help='path of your output location')
-    argParser.add_argument('--size', type=int, default=224, help='image input size')
     argParser.add_argument('--epoch', type=int, default=50, help='how many epoch your model will be trained')
     argParser.add_argument('--batch_size', type=int, default=32, help='batch size for training')
     argParser.add_argument('--learning_rate', type=float, default=1e-3, help='batch size for training')
-    argParser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay used for training')
-    argParser.add_argument('--device', type=str, default='cuda:0', help='device used for training, either cuda (gpu) or cpu')
+    argParser.add_argument('--momentum', type=float, default=9e-1, help='momentum used for training')
+    argParser.add_argument('--checkpoint', type=str, default=None, help='path of your checkpoint file')
+    argParser.add_argument('--device', type=str, default='cuda', help='device used for training, either cuda (gpu) or cpu')
 
     args = argParser.parse_args()
 
@@ -144,8 +142,9 @@ if '__main__':
 
     train_images, val_images, train_labels, val_labels = train_val_split(images, labels, val_size=0.2, shuffle=True, random_seed=42)
 
+    image_size = (240, 360)
     train_transform = transforms.Compose([
-        transforms.Resize((args.size, args.size)),
+        transforms.Resize(image_size),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(35),
         transforms.RandomAdjustSharpness(sharpness_factor=2, p=0.5),
@@ -157,7 +156,7 @@ if '__main__':
     ])
 
     val_transform = transforms.Compose([
-        transforms.Resize((args.size, args.size)),
+        transforms.Resize(image_size),
         transforms.ToTensor(),
         transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
     ])
@@ -175,17 +174,22 @@ if '__main__':
     model = get_model(n_class)
     
     device = torch.device(args.device)
+    model.to(device)
 
     criterion = torch.nn.CrossEntropyLoss()
     
     learning_rate = args.learning_rate
-    weight_decay = args.weight_decay
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
+    momentum = args.momentum
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
 
     epochs = args.epoch
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, learning_rate, epochs=epochs,  steps_per_epoch=len(dataloaders['train']))
+
+    if args.checkpoint is not None:
+        checkpoint = torch.load(args.checkpoint)
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
     
-    history = fit(model, dataloaders, criterion, optimizer, scheduler, epochs, device, output)
+    history = fit(model, dataloaders, criterion, optimizer, epochs, device, output)
 
     # Saving the plot (maybe will be used in the future)
     save_plot(
