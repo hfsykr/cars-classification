@@ -11,8 +11,8 @@ from tqdm import tqdm
 if '__main__':
     argParser = argparse.ArgumentParser()
     argParser.add_argument('--data', type=str, default='data', help='path of your dataset location')
-    argParser.add_argument('--model', type=str, default='mobilenet_v3', help='model that will be used for testing')
-    argParser.add_argument('--weights', type=str, help='path of your trained model weights location')
+    argParser.add_argument('--model', type=str, default='mobilenet_v3_l', help='model that will be used for testing')
+    argParser.add_argument('--weights', type=str, default=None, help='path of your trained model weights location')
     argParser.add_argument('--image_size', type=int, default=[240, 360], nargs=2, help='image size (h x w)')
     argParser.add_argument('--device', type=str, default='cuda', help='device used for testing, either cuda (gpu) or cpu')
 
