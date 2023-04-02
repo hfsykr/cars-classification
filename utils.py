@@ -27,11 +27,11 @@ def get_model(model_type, n_class):
     model = None
 
     if model_type == 'mobilenet_v3_l':
-        model = models.mobilenet_v3_large(weights='IMAGENET1K_V2')
+        model = models.mobilenet_v3_large(weights=models.MobileNet_V3_Large_Weights.DEFAULT )
         num_ftrs = model.classifier[3].in_features
         model.classifier[3] = torch.nn.Linear(num_ftrs, n_class)
     elif model_type == 'efficientnet_v2_s':
-        model = models.efficientnet_v2_s(weights='IMAGENET1K_V1')
+        model = models.efficientnet_v2_s(weights=models.EfficientNet_V2_S_Weights.DEFAULT)
         num_ftrs = model.classifier[1].in_features
         model.classifier[1] = torch.nn.Linear(num_ftrs, n_class)
 

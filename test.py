@@ -24,7 +24,7 @@ if '__main__':
     annot_mat = loadmat(data/'cars_test_annos_withlabels.mat')
     class_mat = loadmat(data/'cars_meta.mat')
 
-    images = [p for p in images_data.iterdir() if p.is_file()]
+    images = sorted([p for p in images_data.iterdir() if p.is_file()])
 
     # Substracting every label with 1, because by default the label start from 1
     labels = [annot['class'][0][0] - 1 for annot in annot_mat['annotations'][0]]
@@ -68,7 +68,7 @@ if '__main__':
             _, preds = torch.max(outputs, 1)
 
             total += inputs.size(0)
-            correct += torch.sum(preds == labels.data).item()
+            correct += torch.sum(preds == labels).item()
     
     time_elapsed = time.time() - time_start
     acc = (correct / total) * 100

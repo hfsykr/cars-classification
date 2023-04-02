@@ -27,7 +27,7 @@ def fit(model, dataloaders, criterion, optimizer, epochs, device, output):
         epoch_start = time.time()
         print('Epoch {}/{}'.format(epoch, epochs-1))
         print('-' * 10)
-
+        
         for phase in ['train', 'val']:
             if phase == 'train':
                 model.train() 
@@ -35,13 +35,14 @@ def fit(model, dataloaders, criterion, optimizer, epochs, device, output):
                 model.eval()
             
             running_loss = 0.0
-            running_corrects = 0
+            running_acc = 0.0
 
             for inputs, labels in tqdm(dataloaders[phase]):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
-                optimizer.zero_grad()
+                if phase == 'train':
+                    optimizer.zero_grad()
 
                 with torch.set_grad_enabled(phase == 'train'):
                     outputs = model(inputs)
@@ -52,16 +53,15 @@ def fit(model, dataloaders, criterion, optimizer, epochs, device, output):
                         loss.backward()
                         optimizer.step()
 
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data).item() # Convert from tensor to float for easier saving later
-            
-            epoch_loss = running_loss / len(dataloaders[phase].dataset)
-            epoch_acc = running_corrects / len(dataloaders[phase].dataset)
+                running_loss += loss.item()
+                running_acc += (torch.sum(preds == labels).item() / len(labels)) 
+
+            epoch_loss = running_loss / len(dataloaders[phase])
+            epoch_acc = running_acc / len(dataloaders[phase])
 
             print(f'{phase.capitalize()} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}')
 
             if phase == 'train':
-                # scheduler.step()
                 train_loss.append(epoch_loss)
                 train_acc.append(epoch_acc)
             else:
@@ -132,7 +132,9 @@ if '__main__':
     annot_mat = loadmat(data/'cars_train_annos.mat')
     class_mat = loadmat(data/'cars_meta.mat')
 
-    images = [p for p in images_data.iterdir() if p.is_file()]
+    # Image need to be sorted so the model can learn (loss and accuracy can improved)
+    # This problem happened only on linux, i still don't know why, but this is not a problem when training on windows.
+    images = sorted([p for p in images_data.iterdir() if p.is_file()])
 
     # Substracting every label with 1, because by default the label start from 1
     labels = [annot['class'][0][0] - 1 for annot in annot_mat['annotations'][0]]
@@ -187,6 +189,7 @@ if '__main__':
     epochs = args.epoch
 
     if args.checkpoint is not None:
+        print('Resume training...')
         checkpoint = torch.load(args.checkpoint)
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])

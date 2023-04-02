@@ -1,6 +1,8 @@
 ## Install Requrements
 
-    pip install -r requrements.txt
+````console
+pip install -r requrements.txt
+````
 
 ## Data
 
@@ -61,7 +63,7 @@ python train.py --data data --output output --model 'mobilenet_v3_l' --epoch 50 
 | --batch_size | int | 32 | Batch size for training |
 | --learning_rate | float | 0.001 | Learning rate for training |
 | --momentum | float | 0.9 | Momentum used for training |
-| --checkpoint | str | None | Path of your checkpoint file for resuming the training process|
+| --checkpoint | str | None | Path of your checkpoint file for resume the training process|
 | --device | str | 'cuda' | Device used for training, either cuda (gpu) or cpu |
 
 ## Testing
