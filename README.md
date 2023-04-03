@@ -6,7 +6,7 @@ pip install -r requrements.txt
 
 ## Data
 
-The dataset used in this project is **Stanford Cars Dataset** [[1]](#1), you can download it [here](http://ai.stanford.edu/~jkrause/cars/car_dataset.html).
+The dataset used in this project is **Stanford Cars Dataset** [[1]](#ref_1), you can download it [here](http://ai.stanford.edu/~jkrause/cars/car_dataset.html).
 
 ### Default Directory Path
 
@@ -32,12 +32,14 @@ The dataset used in this project is **Stanford Cars Dataset** [[1]](#1), you can
 
 You can see the complete models & weights specification [here](https://pytorch.org/vision/stable/models.html#table-of-all-available-classification-weights).
 
-| Model Name | Pre-trained | Pre-trained Acc@1 | Pre-trained Acc@5 | Params |
-| ---------- | :----------: | :----------------: | :----------------: | :------: |
-| 'mobilenet_v3_l' | imagenet | 75.274 | 92.566 | 5.5M |
-| 'efficientnet_v2_s' | imagenet | 84.228 | 96.878 | 21.5M |
+| Model Name | Pre-trained | Pre-trained Acc@1 | Pre-trained Acc@5 | Params | Test Accuracy |
+| ---------- | :----------: | :----------------: | :----------------: | :------: | :-------------: |
+| ['mobilenet_v3_l'](output/mobilenet_v3_l/weights.pt) | imagenet | 75.274 | 92.566 | 5.5M | 80.54 |
+| 'efficientnet_v2_s' | imagenet | 84.228 | 96.878 | 21.5M | - |
 
 ## Training
+
+The model in this project was trained with the default (hyperparameter) settings ([see training arguments below](#training_arguments))
 
 ### Training Example
 
@@ -51,7 +53,7 @@ python train.py --data data --output output --model 'mobilenet_v3_l' --epoch 50 
 python train.py --data data --output output --model 'mobilenet_v3_l' --epoch 50 --image_size 240 360 --batch_size 32 --checkpoint output/checkpoint.pt
 ```
 
-### Available Argument for Training
+### <p id='training_arguments'>Available Arguments for Training</p>
 
 | Argument | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
@@ -74,7 +76,7 @@ python train.py --data data --output output --model 'mobilenet_v3_l' --epoch 50 
 python test.py --data data --model 'mobilenet_v3_l' --weights output/weights.pt
 ```
 
-### Available Argument for Testing
+### Available Arguments for Testing
 
 | Argument | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
@@ -89,10 +91,10 @@ python test.py --data data --model 'mobilenet_v3_l' --weights output/weights.pt
 ### Inference Example
 
 ```console
-python inference.py --data data --model 'mobilenet_v3_l' --weights output/weights.pt --image data\cars_test\00001.jpg
+python inference.py --data data --model 'mobilenet_v3_l' --weights output/weights.pt --image data/cars_test/00001.jpg
 ```
 
-### Available Argument for Inference
+### Available Arguments for Inference
 
 | Argument | Type | Default | Description |
 | -------- | ---- | ------- | ----------- |
@@ -104,7 +106,7 @@ python inference.py --data data --model 'mobilenet_v3_l' --weights output/weight
 | --device | str | 'cuda' | Device used for inference, either cuda (gpu) or cpu |
 
 ## Reference
-<a id='1'>[1]</a> 
+<a id='ref_1'>[1]</a> 
 J. Krause, M. Stark, J. Deng, and L. Fei-Fei,
 '3D Object Representations for Fine-Grained Categorization', 
 4th IEEE Workshop on 3D Representation and Recognition, in 4th International IEEE Workshop on 3D Representation and Recognition (3dRR-13), 2013.
