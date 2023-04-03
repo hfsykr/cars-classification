@@ -25,7 +25,6 @@ if '__main__':
     n_class = len(class_names)
 
     image_size = (args.image_size[0], args.image_size[1])
-    print(image_size)
     transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.ToTensor(),
