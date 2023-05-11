@@ -1,7 +1,7 @@
-## Install Requrements
+## Install Requirements
 
 ````console
-pip install -r requrements.txt
+pip install -r requirements.txt
 ````
 
 ## Data
